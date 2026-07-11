@@ -209,7 +209,6 @@ The following algorithms were explored for signal classification:
 NeuroEye
 │
 ├── arduino/
-├── raspberry_pi/
 ├── machine_learning/
 ├── signal_processing/
 ├── dataset/
@@ -220,10 +219,7 @@ NeuroEye
 │   └── report.pdf
 ├── presentation/
 ├── videos/
-├── results/
 ├── requirements.txt
-├── LICENSE
-└── README.md
 ```
 
 ---
