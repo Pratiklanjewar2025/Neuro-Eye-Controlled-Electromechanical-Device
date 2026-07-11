@@ -1,7 +1,7 @@
 # 🧠 NeuroEye: Intelligent Brain-Computer Interface for Electromechanical Device Control
 
 <p align="center">
-<img src="NeuroEye/docs/diagram/neuroeye_banner.pngg" width="1000">
+<img src="NeuroEye/docs/diagram/neuroeye_banner.png" width="1000">
 </p>
 
 <p align="center">
