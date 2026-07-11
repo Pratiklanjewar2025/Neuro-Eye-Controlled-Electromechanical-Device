@@ -1,0 +1,109 @@
+import serial
+import numpy as np
+from scipy import signal 
+import pandas as pd 
+import time
+import pickle
+from collections import deque
+
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
+
+def setup_filters(sampling_rate):
+    b_notch, a_notch = signal.iirnotch(50.0 / (0.5 * sampling_rate), 30.0)
+    b_bandpass, a_bandpass = signal.butter(
+        4, [0.5 / (0.5 * sampling_rate), 30.0 / (0.5 * sampling_rate)], "band"
+    )
+    return b_notch, a_notch, b_bandpass, a_bandpass
+
+
+def process_eeg_data(data, b_notch, a_notch, b_bandpass, a_bandpass):
+    data = signal.filtfilt(b_notch, a_notch, data)
+    data = signal.filtfilt(b_bandpass, a_bandpass, data)
+    return data
+
+
+def calculate_psd_features(segment, sampling_rate):
+    f, psd_values = signal.welch(segment, fs=sampling_rate, nperseg=len(segment))
+    bands = {"alpha": (8, 13), "beta": (14, 30), "theta": (4, 7), "delta": (0.5, 3)}
+    features = {}
+    for band, (low, high) in bands.items():
+        idx = np.where((f >= low) & (f <= high))
+        features[f"E_{band}"] = np.sum(psd_values[idx])
+    features["alpha_beta_ratio"] = (
+        features["E_alpha"] / features["E_beta"] if features["E_beta"] > 0 else 0
+    )
+    return features
+
+
+def calculate_additional_features(segment, sampling_rate):
+    f, psd = signal.welch(segment, fs=sampling_rate, nperseg=len(segment))
+    peak_frequency = f[np.argmax(psd)]
+    spectral_centroid = np.sum(f * psd) / np.sum(psd)
+    log_f = np.log(f[1:])
+    log_psd = np.log(psd[1:])
+    spectral_slope = np.polyfit(log_f, log_psd, 1)[0]
+    return {
+        "peak_frequency": peak_frequency,
+        "spectral_centroid": spectral_centroid,
+        "spectral_slope": spectral_slope,
+    }
+
+
+def load_model_and_scaler():
+    with open("model.pkl", "rb") as f:
+        clf = pickle.load(f)
+    with open("scaler.pkl", "rb") as f:
+        scaler = pickle.load(f)
+    return clf, scaler
+
+
+def main():
+    ser = serial.Serial("COM7", 230400, timeout=0.1)  # d timeout parameter
+    clf, scaler = load_model_and_scaler()
+    b_notch, a_notch, b_bandpass, a_bandpass = setup_filters(500)
+    buffer = deque(maxlen=500)
+
+    while True:
+        try:
+            raw_data = ser.readline().decode(errors="ignore").strip()  # Fixed decoding
+            if not raw_data:
+                continue
+
+            try:
+                eeg_value = float(raw_data)  # Validate numeric data
+                buffer.append(eeg_value)
+                
+            except ValueError:
+                continue  # Ignore invalid data
+
+            if len(buffer) == 500:
+                buffer_array = np.array(buffer)
+                processed_data = process_eeg_data(
+                    buffer_array, b_notch, a_notch, b_bandpass, a_bandpass
+                )
+                psd_features = calculate_psd_features(processed_data, 500)
+                additional_features = calculate_additional_features(processed_data, 500)
+                features = {**psd_features, **additional_features}
+
+                df = pd.DataFrame([features])
+                X_scaled = scaler.transform(df)
+                prediction = clf.predict(X_scaled)
+
+                print(f"Predicted Class: {prediction[0]}")
+
+                # Send prediction to Arduino
+                ser.write(f"{int(prediction[0])}\n".encode())
+
+                buffer.clear()
+
+        except Exception as e:
+            print(f"Error: {e}")
+            continue
+
+
+if __name__ == "__main__":
+    main()
+
