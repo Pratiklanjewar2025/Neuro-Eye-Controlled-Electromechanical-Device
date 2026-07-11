@@ -210,11 +210,9 @@ NeuroEye
 │
 ├── arduino/
 ├── machine_learning/
-├── signal_processing/
 ├── dataset/
 ├── models/
 ├── docs/
-│   ├── images/
 │   ├── diagrams/
 │   └── report.pdf
 ├── presentation/
@@ -240,24 +238,12 @@ NeuroEye
 
 ---
 
-# 📷 Project Images
-
-| Hardware | Circuit |
-|----------|---------|
-| Add Image | Add Image |
-
-| EEG Signals | Prototype |
-|-------------|-----------|
-| Add Image | Add Image |
-
----
-
 # 🎥 Demonstration
 
 Demo Video
 
 ```
-https://your-demo-link
+[https://your-demo-link](https://drive.google.com/file/d/1gVAsGSmERmDuv_oZyObhD_RfkiVPnG2q/view?usp=sharing)
 ```
 
 ---
